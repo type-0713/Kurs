@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌌</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LingoSphere 3D — Cyber English Universe</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+              mono: ['"Space Grotesk"', 'monospace'],
+            },
+            colors: {
+              cyber: {
+                cyan: '#00f0ff',
+                pink: '#ff007f',
+                purple: '#9d00ff',
+                emerald: '#00ff9d',
+                yellow: '#ffe600',
+                blue: '#3b82f6'
+              }
+            },
+            animation: {
+              'pulse-glow': 'pulseGlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'float-slow': 'floatSlow 4s ease-in-out infinite',
+              'wave-bar': 'waveBar 1s ease-in-out infinite alternate',
+            },
+            keyframes: {
+              pulseGlow: {
+                '0%, 100%': { opacity: '0.9', filter: 'drop-shadow(0 0 15px rgba(0,240,255,0.5))' },
+                '50%': { opacity: '0.4', filter: 'drop-shadow(0 0 5px rgba(0,240,255,0.1))' }
+              },
+              floatSlow: {
+                '0%, 100%': { transform: 'translateY(0px)' },
+                '50%': { transform: 'translateY(-8px)' }
+              },
+              waveBar: {
+                '0%': { transform: 'scaleY(0.2)' },
+                '100%': { transform: 'scaleY(1)' }
+              }
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-slate-950 text-slate-100 transition-colors duration-300 select-none overflow-x-hidden">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

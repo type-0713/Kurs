@@ -1,4 +1,5 @@
-// Ultra High-Fidelity Audio & Speech Engine (Studio Native Stream + SpeechSynthesis + Speech Recognition)
+// Robust, 100% Local & Cross-Browser Speech Service
+// Fixes CORS/403 errors, Chrome GC bugs, and ensures speech only triggers on explicit user request.
 
 class SpeechService {
   constructor() {
@@ -7,16 +8,9 @@ class SpeechService {
     this.isListening = false;
     this.voices = [];
     this.selectedVoice = null;
-    this.speechRate = 1.0;
+    this.speechRate = 0.95;
     this.speechPitch = 1.0;
-    this.currentAudio = null;
-
-    // Default engine: 'studio' (Crystal clear Native Studio Audio Stream) or 'browser'
-    try {
-      this.audioEngine = localStorage.getItem('lingosphere_audio_engine') || 'studio';
-    } catch {
-      this.audioEngine = 'studio';
-    }
+    this.isSpeaking = false;
 
     if (typeof window !== 'undefined') {
       this.initVoices();
@@ -26,52 +20,43 @@ class SpeechService {
     }
   }
 
-  setAudioEngine(engine) {
-    this.audioEngine = engine;
-    try {
-      localStorage.setItem('lingosphere_audio_engine', engine);
-    } catch {
-      // ignore
-    }
-    return this.audioEngine;
-  }
-
-  getAudioEngine() {
-    return this.audioEngine;
-  }
-
   initVoices() {
     if (!this.synth) return;
-    const allVoices = this.synth.getVoices();
-    // Only accept genuine English voices
-    this.voices = allVoices.filter(v => 
-      v.lang && (v.lang.startsWith('en-') || v.lang === 'en' || v.lang.startsWith('en_'))
-    );
+    try {
+      const allVoices = this.synth.getVoices() || [];
+      // Strictly pick English voices
+      this.voices = allVoices.filter(v => 
+        v.lang && (v.lang.toLowerCase().startsWith('en-') || v.lang.toLowerCase() === 'en' || v.lang.toLowerCase().startsWith('en_'))
+      );
 
-    if (this.voices.length > 0) {
-      // Sort to prioritize natural high-fidelity voices
-      const naturalPriority = [
-        'Natural',
-        'Jenny',
-        'Guy',
-        'Aria',
-        'Google US English',
-        'Google UK English Female',
-        'Samantha',
-        'Daniel',
-        'Karen',
-        'en-US'
-      ];
+      if (this.voices.length > 0) {
+        // High quality priority ranking
+        const qualityRank = [
+          'Natural',
+          'Jenny',
+          'Guy',
+          'Aria',
+          'Google US English',
+          'Google UK English Female',
+          'Samantha',
+          'Daniel',
+          'Karen',
+          'en-US',
+          'en-GB'
+        ];
 
-      this.voices.sort((a, b) => {
-        const scoreA = naturalPriority.findIndex(p => a.name.includes(p) || a.lang.includes(p));
-        const scoreB = naturalPriority.findIndex(p => b.name.includes(p) || b.lang.includes(p));
-        return (scoreA === -1 ? 99 : scoreA) - (scoreB === -1 ? 99 : scoreB);
-      });
+        this.voices.sort((a, b) => {
+          const scoreA = qualityRank.findIndex(k => a.name.includes(k) || a.lang.includes(k));
+          const scoreB = qualityRank.findIndex(k => b.name.includes(k) || b.lang.includes(k));
+          return (scoreA === -1 ? 999 : scoreA) - (scoreB === -1 ? 999 : scoreB);
+        });
 
-      if (!this.selectedVoice) {
-        this.selectedVoice = this.voices[0];
+        if (!this.selectedVoice) {
+          this.selectedVoice = this.voices[0];
+        }
       }
+    } catch (e) {
+      console.warn('Voice initialization error:', e);
     }
   }
 
@@ -90,18 +75,6 @@ class SpeechService {
   }
 
   stop() {
-    // Stop any streaming audio
-    if (this.currentAudio) {
-      try {
-        this.currentAudio.pause();
-        this.currentAudio.currentTime = 0;
-      } catch {
-        // ignore
-      }
-      this.currentAudio = null;
-    }
-
-    // Stop browser synthesis
     if (this.synth) {
       try {
         this.synth.cancel();
@@ -109,119 +82,84 @@ class SpeechService {
         // ignore
       }
     }
+    this.isSpeaking = false;
+    window._activeUtterance = null;
   }
 
-  // Master speak function: uses Studio HD stream or Browser Synthesis based on preference
-  speak(text, { rate = 1.0, pitch = 1.0, onBoundary = null, onEnd = null, onStart = null } = {}) {
+  // Speak method: ONLY runs on explicit user click (no CORS, no 403, no errors)
+  speak(text, { rate = 0.95, pitch = 1.0, onBoundary = null, onEnd = null, onStart = null } = {}) {
     if (!text || typeof text !== 'string') return;
-    const cleanText = text.trim();
-    if (!cleanText) return;
+    const clean = text.trim();
+    if (!clean) return;
 
+    if (!this.synth) {
+      console.warn('Speech synthesis is not supported on this device.');
+      if (onEnd) onEnd();
+      return;
+    }
+
+    // Stop any current utterance
     this.stop();
 
-    if (this.audioEngine === 'studio') {
-      this.speakStudioStream(cleanText, { rate, onStart, onEnd, onBoundary });
-    } else {
-      this.speakSynthesis(cleanText, { rate, pitch, onStart, onEnd, onBoundary });
-    }
-  }
-
-  // 1. Studio Native Audio Stream (Crystal clear native human American accent)
-  speakStudioStream(text, { rate = 1.0, onStart = null, onEnd = null, onBoundary = null } = {}) {
-    try {
-      // High-resolution native TTS stream
-      const encoded = encodeURIComponent(text);
-      // Dual source: standard Google TTS stream for pristine pronunciation
-      const streamUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en-US&q=${encoded}`;
-      
-      const audio = new Audio(streamUrl);
-      this.currentAudio = audio;
-      audio.playbackRate = Math.max(0.5, Math.min(1.5, rate || this.speechRate));
-
-      if (onStart) onStart();
-
-      // Karaoke simulation for stream
-      let words = text.split(/\s+/);
-      let wordDuration = (text.length * 55) / (words.length || 1);
-      let boundaryInterval;
-
-      if (onBoundary && words.length > 1) {
-        let currentWord = 0;
-        boundaryInterval = setInterval(() => {
-          currentWord++;
-          if (currentWord < words.length) {
-            onBoundary(currentWord);
-          } else {
-            clearInterval(boundaryInterval);
-          }
-        }, wordDuration);
-      }
-
-      audio.onended = () => {
-        if (boundaryInterval) clearInterval(boundaryInterval);
-        this.currentAudio = null;
-        if (onEnd) onEnd();
-      };
-
-      audio.onerror = (err) => {
-        if (boundaryInterval) clearInterval(boundaryInterval);
-        console.warn('Studio audio stream blocked, falling back to Browser Synthesis:', err);
-        // Seamless fallback
-        this.speakSynthesis(text, { rate, onStart, onEnd, onBoundary });
-      };
-
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          if (boundaryInterval) clearInterval(boundaryInterval);
-          this.speakSynthesis(text, { rate, onStart, onEnd, onBoundary });
-        });
-      }
-    } catch {
-      this.speakSynthesis(text, { rate, onStart, onEnd, onBoundary });
-    }
-  }
-
-  // 2. Upgraded Browser Speech Synthesis with anti-garbage collection fix
-  speakSynthesis(text, { rate = 1.0, pitch = 1.0, onBoundary = null, onEnd = null, onStart = null } = {}) {
-    if (!this.synth) return;
-
-    if (this.voices.length === 0) {
-      this.initVoices();
-    }
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    // Prevent garbage collection cutoff bug in Chromium
-    window._lingoSpeechUtterance = utterance;
-
-    utterance.lang = this.selectedVoice ? this.selectedVoice.lang : 'en-US';
-    if (this.selectedVoice) {
-      utterance.voice = this.selectedVoice;
-    }
-
-    utterance.rate = Math.max(0.5, Math.min(1.8, rate || this.speechRate));
-    utterance.pitch = Math.max(0.8, Math.min(1.3, pitch || this.speechPitch));
-
-    if (onStart) utterance.onstart = onStart;
-    utterance.onend = () => {
-      window._lingoSpeechUtterance = null;
-      if (onEnd) onEnd();
-    };
-    utterance.onerror = (e) => {
-      window._lingoSpeechUtterance = null;
-      console.warn('SpeechSynthesis error:', e);
-      if (onEnd) onEnd();
-    };
-
-    if (onBoundary) {
-      utterance.onboundary = (event) => {
-        if (event.name === 'word') {
-          onBoundary(event.charIndex);
+    // Small delay before speaking to prevent Chrome cancellation bug
+    setTimeout(() => {
+      try {
+        if (this.synth.paused) {
+          this.synth.resume();
         }
-      };
-    }
 
-    this.synth.speak(utterance);
+        if (this.voices.length === 0) {
+          this.initVoices();
+        }
+
+        const utterance = new SpeechSynthesisUtterance(clean);
+        window._activeUtterance = utterance; // Prevent garbage collection bug
+
+        utterance.lang = this.selectedVoice ? this.selectedVoice.lang : 'en-US';
+        if (this.selectedVoice) {
+          utterance.voice = this.selectedVoice;
+        }
+
+        utterance.rate = Math.max(0.5, Math.min(1.5, rate || this.speechRate));
+        utterance.pitch = Math.max(0.8, Math.min(1.2, pitch || this.speechPitch));
+
+        utterance.onstart = () => {
+          this.isSpeaking = true;
+          if (onStart) onStart();
+        };
+
+        utterance.onend = () => {
+          this.isSpeaking = false;
+          window._activeUtterance = null;
+          if (onEnd) onEnd();
+        };
+
+        utterance.onerror = (event) => {
+          this.isSpeaking = false;
+          window._activeUtterance = null;
+          // 'canceled' or 'interrupted' is normal when user stops or changes word
+          if (event.error !== 'canceled' && event.error !== 'interrupted') {
+            console.warn('SpeechSynthesis notice:', event.error);
+          }
+          if (onEnd) onEnd();
+        };
+
+        if (onBoundary) {
+          utterance.onboundary = (event) => {
+            if (event.name === 'word') {
+              onBoundary(event.charIndex);
+            }
+          };
+        }
+
+        this.synth.speak(utterance);
+      } catch (err) {
+        console.warn('Speech error occurred:', err);
+        this.isSpeaking = false;
+        window._activeUtterance = null;
+        if (onEnd) onEnd();
+      }
+    }, 40);
   }
 
   // Speech Recognition (Microphone)

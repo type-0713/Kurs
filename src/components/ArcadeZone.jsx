@@ -155,7 +155,6 @@ export default function ArcadeZone({ isDark, onAddXp }) {
 
     if (val === target) {
       soundFx.playLaser();
-      speechService.speak(target);
       confetti({ particleCount: 30, spread: 40, origin: { y: 0.5 } });
       setMeteorScore((s) => s + 100);
       setMeteorWordIdx((idx) => (idx + 1) % METEOR_WORDS.length);
@@ -252,7 +251,6 @@ export default function ArcadeZone({ isDark, onAddXp }) {
       const allFound = currentHangman.word.split('').every(c => updated.includes(c));
       if (allFound) {
         soundFx.playLevelUp();
-        speechService.speak(currentHangman.word);
         confetti({ particleCount: 70, spread: 70, origin: { y: 0.7 } });
         storageService.addDailyActivity({
           type: 'arcade',
@@ -629,7 +627,6 @@ export default function ArcadeZone({ isDark, onAddXp }) {
                   const updated = [...userLetters, char].join('');
                   if (updated === currentScramble.target) {
                     soundFx.playLevelUp();
-                    speechService.speak(currentScramble.target);
                     confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
                     if (onAddXp) onAddXp(30);
                     setTimeout(() => {
@@ -748,7 +745,6 @@ export default function ArcadeZone({ isDark, onAddXp }) {
                 onClick={() => {
                   if (i === currentOdd.oddIndex) {
                     soundFx.playSuccess();
-                    speechService.speak(opt);
                     setOddFeedback({ correct: true, text: `To‘g‘ri! ${currentOdd.reasonUz}` });
                     if (onAddXp) onAddXp(25);
                   } else {
@@ -928,7 +924,6 @@ export default function ArcadeZone({ isDark, onAddXp }) {
                 const formed = selectedTokens.join(' ');
                 if (formed === currentSentenceGame.correctSentence) {
                   soundFx.playLevelUp();
-                  speechService.speak(formed);
                   confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 } });
                   if (onAddXp) onAddXp(35);
                   setSentenceIdx((prev) => (prev + 1) % SENTENCE_ARCHITECT_DATA.length);

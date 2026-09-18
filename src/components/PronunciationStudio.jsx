@@ -28,7 +28,6 @@ export default function PronunciationStudio({ isDark, onAddXp }) {
   const [selectedVoiceUri, setSelectedVoiceUri] = useState('');
   const [speechRate, setSpeechRate] = useState(1.0);
   const [speechPitch, setSpeechPitch] = useState(1.0);
-  const [audioEngine, setAudioEngine] = useState(() => speechService.getAudioEngine());
 
   // Microphone state
   const [isRecording, setIsRecording] = useState(false);
@@ -455,45 +454,16 @@ export default function PronunciationStudio({ isDark, onAddXp }) {
             </div>
           </div>
 
-          {/* Audio Engine Selection (Studio Stream vs Browser) */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
-              <span>Audio Engine / Ovoz Tizimi:</span>
-              <span className="text-[10px] text-cyan-400 font-normal">
-                {audioEngine === 'studio' ? '🌟 Sof Insoniy Ovoz' : '🤖 Brauzer Tizimi'}
+          {/* High-Fidelity Audio Mode Indicator */}
+          <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center space-x-2.5">
+            <Volume2 className="w-5 h-5 text-cyan-400 animate-pulse flex-shrink-0" />
+            <div>
+              <span className="text-xs font-bold text-white block">
+                Native English Voice Engine
               </span>
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playClick();
-                  setAudioEngine('studio');
-                  speechService.setAudioEngine('studio');
-                }}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                  audioEngine === 'studio'
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 border-cyan-400 shadow-md'
-                    : isDark ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
-                }`}
-              >
-                🌟 Studio HD (Tavsiya)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playClick();
-                  setAudioEngine('browser');
-                  speechService.setAudioEngine('browser');
-                }}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                  audioEngine === 'browser'
-                    ? 'bg-purple-600 text-white border-purple-400 shadow-md'
-                    : isDark ? 'bg-slate-950 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
-                }`}
-              >
-                🤖 Browser Voice
-              </button>
+              <span className="text-[10px] font-light text-cyan-300/80 block">
+                Faqat Eshitish tugmasi bosilganda toza inglizcha ovoz yangraydi
+              </span>
             </div>
           </div>
 

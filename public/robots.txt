@@ -1,0 +1,6 @@
+# Robots.txt for LingoSphere 3D
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://lingosphere-3d.com/sitemap.xml
